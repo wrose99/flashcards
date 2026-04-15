@@ -188,8 +188,8 @@ function NoteStaff({
       </svg>
       <figcaption>
         <span>{note.clef === "treble" ? "Treble Clef" : "Bass Clef"}</span>
-        <button className="play-note-button" type="button" onClick={onPlay} aria-label={`Play ${noteName(note)}`}>
-          Play {noteName(note)}
+        <button className="play-note-button" type="button" onClick={onPlay} aria-label="Play this note">
+          Play
         </button>
         <span className="audio-status" aria-live="polite">
           {audioStatus}
