@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Clef = "treble" | "bass";
 type Letter = "C" | "D" | "E" | "F" | "G" | "A" | "B";
@@ -53,6 +53,7 @@ const LINE_GAP = 18;
 const NOTE_X = 300;
 const BEST_KEY = "note-reader-best-streak";
 const THEME_KEY = "note-reader-theme";
+const PIANO_MP3_BASE_URL = "https://raw.githubusercontent.com/fuhton/piano-mp3/master/piano-mp3";
 
 function notesForMode(mode: PracticeMode) {
   if (mode === "both") {
@@ -80,6 +81,14 @@ function randomNote(pool: Note[], previous?: Note) {
 
 function diatonicIndex(note: Pick<Note, "letter" | "octave">) {
   return note.octave * 7 + LETTERS.indexOf(note.letter);
+}
+
+function noteName(note: Pick<Note, "letter" | "octave">) {
+  return `${note.letter}${note.octave}`;
+}
+
+function audioUrl(note: Pick<Note, "letter" | "octave">) {
+  return `${PIANO_MP3_BASE_URL}/${noteName(note)}.mp3`;
 }
 
 function noteY(note: Note) {
@@ -129,7 +138,15 @@ function ClefGlyph({ clef }: { clef: Clef }) {
   );
 }
 
-function NoteStaff({ note }: { note: Note }) {
+function NoteStaff({
+  note,
+  onPlay,
+  audioStatus
+}: {
+  note: Note;
+  onPlay: () => void;
+  audioStatus: string;
+}) {
   const y = noteY(note);
   const stemUp = y >= STAFF_TOP + LINE_GAP * 2;
   const stemX = stemUp ? NOTE_X + 13 : NOTE_X - 13;
@@ -169,7 +186,15 @@ function NoteStaff({ note }: { note: Note }) {
         />
         <line x1={stemX} x2={stemX} y1={y} y2={stemEndY} className="note-stem" />
       </svg>
-      <figcaption>{note.clef === "treble" ? "Treble Clef" : "Bass Clef"}</figcaption>
+      <figcaption>
+        <span>{note.clef === "treble" ? "Treble Clef" : "Bass Clef"}</span>
+        <button className="play-note-button" type="button" onClick={onPlay} aria-label={`Play ${noteName(note)}`}>
+          Play {noteName(note)}
+        </button>
+        <span className="audio-status" aria-live="polite">
+          {audioStatus}
+        </span>
+      </figcaption>
     </figure>
   );
 }
@@ -185,6 +210,8 @@ export default function Home() {
   const [theme, setTheme] = useState<"light" | "dim">("light");
   const [mode, setMode] = useState<PracticeMode>("both");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [audioStatus, setAudioStatus] = useState("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const notePool = useMemo(() => notesForMode(mode), [mode]);
 
@@ -205,6 +232,10 @@ export default function Home() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    setAudioStatus("");
+  }, [note]);
 
   const accuracy = useMemo(() => {
     if (attempts === 0) {
@@ -260,6 +291,26 @@ export default function Home() {
     setNote((current) => randomNote(notePool, current));
   }, [notePool]);
 
+  const playCurrentNote = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    const audio = new Audio(audioUrl(note));
+    audioRef.current = audio;
+    setAudioStatus("Playing");
+
+    audio
+      .play()
+      .then(() => {
+        audio.onended = () => setAudioStatus("");
+      })
+      .catch(() => {
+        setAudioStatus("Sound unavailable");
+      });
+  }, [note]);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const key = event.key.toUpperCase();
@@ -272,11 +323,15 @@ export default function Home() {
         event.preventDefault();
         goNext();
       }
+
+      if (event.key.toLowerCase() === "p") {
+        playCurrentNote();
+      }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [answer, goNext, isAnswered]);
+  }, [answer, goNext, isAnswered, playCurrentNote]);
 
   const scoreLabel = `${correct}/${attempts}`;
   const feedback =
@@ -360,7 +415,7 @@ export default function Home() {
           <span style={{ width: `${Math.max(7, progress)}%` }} />
         </div>
 
-        <NoteStaff note={note} />
+        <NoteStaff note={note} onPlay={playCurrentNote} audioStatus={audioStatus} />
 
         <div className="answer-panel">
           <p className={selected === null ? "prompt" : selected === note.letter ? "prompt correct" : "prompt wrong"}>
@@ -384,7 +439,7 @@ export default function Home() {
               );
             })}
           </div>
-          <p className="keyboard-hint">Keyboard: press C D E F G A B to answer · Space or Enter for next</p>
+          <p className="keyboard-hint">Keyboard: press C D E F G A B to answer · P to hear the note · Space or Enter for next</p>
         </div>
       </section>
     </main>

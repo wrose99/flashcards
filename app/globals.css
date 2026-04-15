@@ -285,10 +285,40 @@ button {
 }
 
 .staff-card figcaption {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: -18px;
   color: var(--muted);
   font-size: 18px;
   font-weight: 650;
+}
+
+.play-note-button {
+  min-height: 34px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0 14px;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.play-note-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.audio-status {
+  min-width: 120px;
+  color: var(--soft);
+  font-size: 14px;
+  text-align: left;
 }
 
 .answer-panel {
@@ -341,7 +371,8 @@ button {
 .answer-button:focus-visible,
 .icon-button:focus-visible,
 .reset-button:focus-visible,
-.setting-choice:focus-visible {
+.setting-choice:focus-visible,
+.play-note-button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent), transparent 70%);
   outline-offset: 2px;
 }
@@ -405,6 +436,12 @@ button {
 
   .staff-card figcaption {
     margin-top: -8px;
+  }
+
+  .audio-status {
+    min-width: 0;
+    width: 100%;
+    text-align: center;
   }
 
   .answer-grid {
